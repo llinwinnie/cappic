@@ -3,14 +3,14 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getAuth } from 'firebase/auth';
 
-// Your Firebase config (you'll get this from Firebase Console)
+// Your Firebase config for cappic project
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyBXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", // You'll get this from Firebase Console
+  authDomain: "cappic-a0124.firebaseapp.com",
+  projectId: "cappic-a0124",
+  storageBucket: "cappic-a0124.appspot.com",
+  messagingSenderId: "679538022164",
+  appId: "1:679538022164:web:XXXXXXXXXXXXXXXXXXXX" // You'll get this from Firebase Console
 };
 
 // Initialize Firebase

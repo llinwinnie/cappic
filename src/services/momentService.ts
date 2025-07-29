@@ -2,28 +2,25 @@ import {
   collection, 
   addDoc, 
   getDocs, 
-  query, 
-  orderBy, 
-  where, 
   deleteDoc, 
+  updateDoc, 
   doc, 
-  updateDoc,
+  query, 
+  where, 
+  orderBy,
   Timestamp 
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '../firebase';
 import { Moment } from '../types';
 
-// Collection name
-const MOMENTS_COLLECTION = 'moments';
-
-// Add a new moment
+// Add a new moment to Firestore
 export const addMoment = async (moment: Omit<Moment, 'id'>): Promise<string> => {
   try {
-    const docRef = await addDoc(collection(db, MOMENTS_COLLECTION), {
+    const docRef = await addDoc(collection(db, 'moments'), {
       ...moment,
-      timestamp: Timestamp.fromDate(new Date(moment.timestamp)),
-      createdAt: Timestamp.now()
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now()
     });
     return docRef.id;
   } catch (error) {
@@ -33,41 +30,30 @@ export const addMoment = async (moment: Omit<Moment, 'id'>): Promise<string> => 
 };
 
 // Get all moments for a user
-export const getMoments = async (userId: string): Promise<Moment[]> => {
+export const getMoments = async (userId: string = 'local-user'): Promise<Moment[]> => {
   try {
     const q = query(
-      collection(db, MOMENTS_COLLECTION),
+      collection(db, 'moments'),
       where('userId', '==', userId),
       orderBy('timestamp', 'desc')
     );
-    
     const querySnapshot = await getDocs(q);
-    const moments: Moment[] = [];
-    
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      moments.push({
-        id: doc.id,
-        timestamp: data.timestamp.toDate().getTime(),
-        imageUrl: data.imageUrl,
-        note: data.note,
-        tags: data.tags,
-        mood: data.mood,
-        userId: data.userId
-      });
-    });
-    
-    return moments;
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      timestamp: doc.data().timestamp?.toMillis() || doc.data().timestamp,
+      createdAt: doc.data().createdAt?.toMillis() || doc.data().createdAt
+    })) as Moment[];
   } catch (error) {
     console.error('Error getting moments:', error);
-    throw error;
+    return [];
   }
 };
 
 // Delete a moment
 export const deleteMoment = async (momentId: string): Promise<void> => {
   try {
-    await deleteDoc(doc(db, MOMENTS_COLLECTION, momentId));
+    await deleteDoc(doc(db, 'moments', momentId));
   } catch (error) {
     console.error('Error deleting moment:', error);
     throw error;
@@ -77,8 +63,10 @@ export const deleteMoment = async (momentId: string): Promise<void> => {
 // Update a moment
 export const updateMoment = async (momentId: string, updates: Partial<Moment>): Promise<void> => {
   try {
-    const docRef = doc(db, MOMENTS_COLLECTION, momentId);
-    await updateDoc(docRef, updates);
+    await updateDoc(doc(db, 'moments', momentId), {
+      ...updates,
+      updatedAt: Timestamp.now()
+    });
   } catch (error) {
     console.error('Error updating moment:', error);
     throw error;
@@ -88,7 +76,8 @@ export const updateMoment = async (momentId: string, updates: Partial<Moment>): 
 // Upload image to Firebase Storage
 export const uploadImage = async (file: File, userId: string): Promise<string> => {
   try {
-    const fileName = `${userId}/${Date.now()}_${file.name}`;
+    const timestamp = Date.now();
+    const fileName = `${userId}/${timestamp}_${file.name}`;
     const storageRef = ref(storage, fileName);
     
     const snapshot = await uploadBytes(storageRef, file);
@@ -112,52 +101,30 @@ export const deleteImage = async (imageUrl: string): Promise<void> => {
   }
 };
 
-// Search moments
+// Search moments by text
 export const searchMoments = async (
-  userId: string, 
   searchTerm: string, 
-  filter?: string
+  filter?: string, 
+  userId: string = 'local-user'
 ): Promise<Moment[]> => {
   try {
-    let q = query(
-      collection(db, MOMENTS_COLLECTION),
-      where('userId', '==', userId),
-      orderBy('timestamp', 'desc')
-    );
+    const moments = await getMoments(userId);
     
-    const querySnapshot = await getDocs(q);
-    const moments: Moment[] = [];
-    
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      const moment = {
-        id: doc.id,
-        timestamp: data.timestamp.toDate().getTime(),
-        imageUrl: data.imageUrl,
-        note: data.note,
-        tags: data.tags,
-        mood: data.mood,
-        userId: data.userId
-      };
-      
+    return moments.filter(moment => {
       // Apply search filter
-      const matchesSearch = !searchTerm || 
+      const matchesSearch = !searchTerm ||
         moment.note?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        moment.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-      
+        moment.tags?.some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+
       // Apply mood/tag filter
-      const matchesFilter = !filter || 
-        moment.mood === filter || 
+      const matchesFilter = !filter ||
+        moment.mood === filter ||
         moment.tags?.includes(filter);
-      
-      if (matchesSearch && matchesFilter) {
-        moments.push(moment);
-      }
+
+      return matchesSearch && matchesFilter;
     });
-    
-    return moments;
   } catch (error) {
     console.error('Error searching moments:', error);
-    throw error;
+    return [];
   }
 }; 

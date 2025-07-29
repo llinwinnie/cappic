@@ -5,7 +5,7 @@ export interface Moment {
   note?: string;
   tags?: string[];
   mood?: string;
-  userId: string; // Add user ID for database
+  userId?: string; // Optional for now, required when using Firebase
   createdAt?: number; // Add creation timestamp
 }
 

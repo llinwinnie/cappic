@@ -5,9 +5,10 @@ import { Moment } from '../types';
 interface CaptureMomentProps {
   onClose: () => void;
   onCapture: (moment: Moment) => void;
+  userId?: string;
 }
 
-const CaptureMoment: React.FC<CaptureMomentProps> = ({ onClose, onCapture }) => {
+const CaptureMoment: React.FC<CaptureMomentProps> = ({ onClose, onCapture, userId }) => {
   const [captureMode, setCaptureMode] = useState<'camera' | 'upload'>('camera');
   const [imageUrl, setImageUrl] = useState<string>('');
   const [note, setNote] = useState('');
@@ -86,6 +87,7 @@ const CaptureMoment: React.FC<CaptureMomentProps> = ({ onClose, onCapture }) => 
       note: note.trim() || undefined,
       mood: mood || undefined,
       tags: tags.length > 0 ? tags : undefined,
+      userId: userId || 'local-user', // Use userId prop or default
     };
 
     onCapture(moment);
